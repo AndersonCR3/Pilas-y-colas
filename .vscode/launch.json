@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run App (MVP Personas)",
+      "request": "launch",
+      "mainClass": "uptc.edu.co.App",
+      "classPaths": [
+        "${workspaceFolder}/target/classes"
+      ],
+      "preLaunchTask": "Compilar App (javac)"
+    }
+  ]
+}
