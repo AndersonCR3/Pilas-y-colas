@@ -1,4 +1,4 @@
-package uptc.edu.co.model;
+package uptc.edu.co.pojo;
 
 public class Person {
     private final int id;

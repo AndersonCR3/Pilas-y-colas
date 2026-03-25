@@ -1,28 +1,40 @@
 package uptc.edu.co.model;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 
-public class PersonModel {
-    private final List<Person> people;
+import uptc.edu.co.config.AppConfig;
+import uptc.edu.co.interfaces.IPersonModel;
+import uptc.edu.co.pojo.Person;
+
+public class PersonModel implements IPersonModel {
+    private final Queue<Person> peopleQueue;
     private int nextId;
     private int minNamesLength;
     private int maxNamesLength;
     private int minLastNamesLength;
     private int maxLastNamesLength;
+    private int pageSize;
 
-    public PersonModel() {
-        this.people = new ArrayList<Person>();
+    public PersonModel(AppConfig appConfig) {
+        this.peopleQueue = new ArrayDeque<Person>();
         this.nextId = 1;
-        this.minNamesLength = 2;
-        this.maxNamesLength = 40;
-        this.minLastNamesLength = 2;
-        this.maxLastNamesLength = 40;
+        this.minNamesLength = appConfig.getInt("person.names.min.length", 2);
+        this.maxNamesLength = appConfig.getInt("person.names.max.length", 40);
+        this.minLastNamesLength = appConfig.getInt("person.lastnames.min.length", 2);
+        this.maxLastNamesLength = appConfig.getInt("person.lastnames.max.length", 40);
+        this.pageSize = appConfig.getInt("person.list.page.size", 10);
+
+        if (pageSize <= 0) {
+            pageSize = 10;
+        }
     }
 
     public void addPerson(Person person) {
-        people.add(person);
+        peopleQueue.offer(person);
     }
 
     public Person createPerson(String names, String lastNames, String gender, String birthDate) {
@@ -32,8 +44,12 @@ public class PersonModel {
         return person;
     }
 
+    public Person removeNextPerson() {
+        return peopleQueue.poll();
+    }
+
     public List<Person> getPeople() {
-        return Collections.unmodifiableList(people);
+        return Collections.unmodifiableList(new ArrayList<Person>(peopleQueue));
     }
 
     public int getMinNamesLength() {
@@ -64,5 +80,9 @@ public class PersonModel {
             this.minLastNamesLength = minLength;
             this.maxLastNamesLength = maxLength;
         }
+    }
+
+    public int getPageSize() {
+        return pageSize;
     }
 }

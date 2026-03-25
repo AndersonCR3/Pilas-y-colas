@@ -7,7 +7,10 @@
       "request": "launch",
       "mainClass": "uptc.edu.co.App",
       "classPaths": [
-        "${workspaceFolder}/target/classes"
+        "${workspaceFolder}/target/classes",
+        "${workspaceFolder}/src/main/resources",
+        "${env:USERPROFILE}/.m2/repository/org/apache/logging/log4j/log4j-api/2.17.2/log4j-api-2.17.2.jar",
+        "${env:USERPROFILE}/.m2/repository/org/apache/logging/log4j/log4j-core/2.17.2/log4j-core-2.17.2.jar"
       ],
       "preLaunchTask": "Compilar App (javac)"
     }
