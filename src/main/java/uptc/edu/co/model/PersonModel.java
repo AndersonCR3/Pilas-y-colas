@@ -48,6 +48,54 @@ public class PersonModel implements IPersonModel {
         return peopleQueue.poll();
     }
 
+    public Person removePersonById(int id) {
+        Person target = null;
+        for (Person person : peopleQueue) {
+            if (person.getId() == id) {
+                target = person;
+                break;
+            }
+        }
+
+        if (target != null) {
+            peopleQueue.remove(target);
+        }
+        return target;
+    }
+
+    public Person removePersonByName(String names) {
+        Person target = findPersonByName(names);
+        if (target != null) {
+            peopleQueue.remove(target);
+        }
+        return target;
+    }
+
+    private Person findPersonByName(String names) {
+        if (names == null) {
+            return null;
+        }
+        String targetName = names.trim();
+        for (Person person : peopleQueue) {
+            if (person.getNames().equalsIgnoreCase(targetName)) {
+                return person;
+            }
+        }
+        return null;
+    }
+
+    public Person removeLastPerson() {
+        Person last = null;
+        for (Person person : peopleQueue) {
+            last = person;
+        }
+
+        if (last != null) {
+            peopleQueue.remove(last);
+        }
+        return last;
+    }
+
     public List<Person> getPeople() {
         return Collections.unmodifiableList(new ArrayList<Person>(peopleQueue));
     }

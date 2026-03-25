@@ -23,15 +23,16 @@ public class ProductModel implements IProductModel {
         this.descriptionFormat = appConfig.getString("product.description.format", "UPPER");
     }
 
-    public Product createProduct(String description, String unit, BigDecimal price) {
+    public Product createProduct(String description, String unit, BigDecimal quantity, BigDecimal price) {
         String normalizedDescription = normalizeDescription(description);
         String normalizedUnit = normalizeUnit(unit);
 
         validateDescription(normalizedDescription);
         validateUnit(normalizedUnit);
+        validateQuantity(quantity);
         validatePrice(price);
 
-        Product product = new Product(nextId, normalizedDescription, normalizedUnit, price);
+        Product product = new Product(nextId, normalizedDescription, normalizedUnit, quantity, price);
         nextId++;
         products.add(product);
         return product;
@@ -46,6 +47,14 @@ public class ProductModel implements IProductModel {
             }
         }
         return null;
+    }
+
+    public Product removeProductByName(String description) {
+        int index = findProductIndexByDescription(description);
+        if (index < 0) {
+            return null;
+        }
+        return products.remove(index);
     }
 
     public List<Product> getProducts() {
@@ -82,6 +91,12 @@ public class ProductModel implements IProductModel {
         }
     }
 
+    private void validateQuantity(BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Cantidad debe ser positiva");
+        }
+    }
+
     private String normalizeDescription(String description) {
         if (description == null) {
             return "";
@@ -94,21 +109,41 @@ public class ProductModel implements IProductModel {
             return value.toUpperCase(Locale.ROOT);
         }
         if ("TITLE".equalsIgnoreCase(descriptionFormat)) {
-            String[] words = value.toLowerCase(Locale.ROOT).split("\\s+");
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < words.length; i++) {
-                String word = words[i];
-                if (word.isEmpty()) {
-                    continue;
-                }
-                builder.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
-                if (i < words.length - 1) {
-                    builder.append(' ');
-                }
-            }
-            return builder.toString();
+            return toTitleCase(value);
         }
         return value.toUpperCase(Locale.ROOT);
+    }
+
+    private int findProductIndexByDescription(String description) {
+        if (description == null) {
+            return -1;
+        }
+        String targetDescription = description.trim();
+        for (int index = 0; index < products.size(); index++) {
+            if (products.get(index).getDescription().equalsIgnoreCase(targetDescription)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private String toTitleCase(String value) {
+        String[] words = value.toLowerCase(Locale.ROOT).split("\\s+");
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            appendTitledWord(builder, words[i], i < words.length - 1);
+        }
+        return builder.toString();
+    }
+
+    private void appendTitledWord(StringBuilder builder, String word, boolean appendSpace) {
+        if (word.isEmpty()) {
+            return;
+        }
+        builder.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        if (appendSpace) {
+            builder.append(' ');
+        }
     }
 
     private String normalizeUnit(String unit) {

@@ -6,8 +6,10 @@
       "name": "Run App (MVP Personas)",
       "request": "launch",
       "mainClass": "uptc.edu.co.App",
+      "projectName": "prmtall3",
+      "cwd": "${workspaceFolder}",
       "classPaths": [
-        "${workspaceFolder}/target/classes",
+        "$Runtime",
         "${workspaceFolder}/src/main/resources",
         "${env:USERPROFILE}/.m2/repository/org/apache/logging/log4j/log4j-api/2.17.2/log4j-api-2.17.2.jar",
         "${env:USERPROFILE}/.m2/repository/org/apache/logging/log4j/log4j-core/2.17.2/log4j-core-2.17.2.jar"

@@ -32,44 +32,25 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
 import uptc.edu.co.i18n.MessageService;
-import uptc.edu.co.interfaces.IAccountingModel;
-import uptc.edu.co.interfaces.IPersonModel;
-import uptc.edu.co.interfaces.IProductModel;
+import uptc.edu.co.mediator.GuiMenuMediator;
 import uptc.edu.co.pojo.AccountingMovement;
 import uptc.edu.co.pojo.Person;
 import uptc.edu.co.pojo.Product;
+import uptc.edu.co.presenter.ActionResult;
 
 public class MainFrame extends JFrame {
     private static final DateTimeFormatter BIRTH_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final MessageService messages;
-    private final IPersonModel personModel;
-    private final IProductModel productModel;
-    private final IAccountingModel accountingModel;
-
+    private final GuiMenuMediator menuMediator;
     private final CardLayout cardLayout;
     private final JPanel cardPanel;
 
-    private DefaultTableModel personTableModel;
-    private JLabel personPageLabel;
-    private int personPageIndex;
-
-    private DefaultTableModel productTableModel;
-
-    private DefaultTableModel accountingTableModel;
-    private JLabel accountingTotalLabel;
-
-    public MainFrame(MessageService messages, IPersonModel personModel, IProductModel productModel,
-            IAccountingModel accountingModel) {
+    public MainFrame(MessageService messages, GuiMenuMediator menuMediator) {
         this.messages = messages;
-        this.personModel = personModel;
-        this.productModel = productModel;
-        this.accountingModel = accountingModel;
-
+        this.menuMediator = menuMediator;
         this.cardLayout = new CardLayout();
         this.cardPanel = new JPanel(cardLayout);
-        this.personPageIndex = 0;
-
         initializeFrame();
         initializeCards();
     }
@@ -91,518 +72,410 @@ public class MainFrame extends JFrame {
     }
 
     private JPanel createMainMenuPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        JLabel title = new JLabel(messages.get("menu.main.title"), SwingConstants.CENTER);
-        panel.add(title, BorderLayout.NORTH);
-
-        JPanel buttonsPanel = new JPanel(new GridLayout(4, 1, 12, 12));
-
-        JButton personsButton = new JButton(messages.get("menu.main.persons"));
-        personsButton.addActionListener(e -> showCard("PERSON"));
-
-        JButton productsButton = new JButton(messages.get("menu.main.products"));
-        productsButton.addActionListener(e -> showCard("PRODUCT"));
-
-        JButton accountingButton = new JButton(messages.get("menu.main.accounting"));
-        accountingButton.addActionListener(e -> showCard("ACCOUNTING"));
-
-        JButton exitButton = new JButton(messages.get("menu.main.exit"));
-        exitButton.addActionListener(e -> dispose());
-
-        buttonsPanel.add(personsButton);
-        buttonsPanel.add(productsButton);
-        buttonsPanel.add(accountingButton);
-        buttonsPanel.add(exitButton);
-
-        JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 80));
-        centerPanel.add(buttonsPanel);
-        panel.add(centerPanel, BorderLayout.CENTER);
-        return panel;
+        JButton[] buttons = new JButton[] {
+            button("menu.main.persons", this::openPersonCard),
+            button("menu.main.products", this::openProductCard),
+            button("menu.main.accounting", this::openAccountingCard),
+            button("menu.main.exit", this::dispose)
+        };
+        return createVerticalMenu(messages.get("menu.main.title"), buttons, 80);
     }
 
     private JPanel createPersonPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-
-        JPanel topButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton addButton = new JButton(messages.get("menu.person.add"));
-        JButton removeButton = new JButton(messages.get("menu.person.remove"));
-        JButton listButton = new JButton(messages.get("menu.person.list"));
-        JButton exportButton = new JButton(messages.get("menu.person.export"));
-        JButton backButton = new JButton(messages.get("menu.person.back"));
-
-        addButton.addActionListener(e -> addPerson());
-        removeButton.addActionListener(e -> removePerson());
-        listButton.addActionListener(e -> refreshPersonTable());
-        exportButton.addActionListener(e -> exportPeopleToCsv());
-        backButton.addActionListener(e -> showCard("MAIN"));
-
-        topButtons.add(addButton);
-        topButtons.add(removeButton);
-        topButtons.add(listButton);
-        topButtons.add(exportButton);
-        topButtons.add(backButton);
-
-        personTableModel = new DefaultTableModel(new Object[] {
-            messages.get("person.list.col.names"),
-            messages.get("person.list.col.lastNames"),
-            messages.get("person.list.col.gender"),
-            messages.get("person.list.col.age")
-        }, 0) {
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+        JButton[] buttons = new JButton[] {
+            button("menu.person.add", this::addPerson),
+            button("menu.person.remove", this::removePersonByParameter),
+            button("menu.person.removeLast", this::removeLastPerson),
+            button("menu.person.list", this::openPersonListWindow),
+            button("menu.person.export", this::exportPeopleToCsv),
+            button("menu.person.back", this::openMainCard)
         };
-        JTable table = new JTable(personTableModel);
-        setTableLeftAlignment(table);
-
-        JScrollPane scrollPane = new JScrollPane(table);
-
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton prevButton = new JButton("<");
-        JButton nextButton = new JButton(">");
-        personPageLabel = new JLabel("1/1");
-
-        prevButton.addActionListener(e -> {
-            if (personPageIndex > 0) {
-                personPageIndex--;
-                refreshPersonTable();
-            }
-        });
-
-        nextButton.addActionListener(e -> {
-            int totalPages = calculateTotalPersonPages();
-            if (personPageIndex < totalPages - 1) {
-                personPageIndex++;
-                refreshPersonTable();
-            }
-        });
-
-        bottomPanel.add(prevButton);
-        bottomPanel.add(personPageLabel);
-        bottomPanel.add(nextButton);
-
-        panel.add(topButtons, BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
-        panel.add(bottomPanel, BorderLayout.SOUTH);
-
-        refreshPersonTable();
-        return panel;
+        return createVerticalMenu(messages.get("menu.person.title"), buttons, 60);
     }
 
     private JPanel createProductPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-
-        JPanel topButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton addButton = new JButton(messages.get("menu.product.add"));
-        JButton removeButton = new JButton(messages.get("menu.product.remove"));
-        JButton listButton = new JButton(messages.get("menu.product.list"));
-        JButton exportButton = new JButton(messages.get("menu.product.export"));
-        JButton backButton = new JButton(messages.get("menu.product.back"));
-
-        addButton.addActionListener(e -> addProduct());
-        removeButton.addActionListener(e -> removeProduct());
-        listButton.addActionListener(e -> refreshProductTable());
-        exportButton.addActionListener(e -> exportProductsToCsv());
-        backButton.addActionListener(e -> showCard("MAIN"));
-
-        topButtons.add(addButton);
-        topButtons.add(removeButton);
-        topButtons.add(listButton);
-        topButtons.add(exportButton);
-        topButtons.add(backButton);
-
-        productTableModel = new DefaultTableModel(new Object[] { "ID", "DESCRIPCION", "UNIDAD", "PRECIO" }, 0) {
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+        JButton[] buttons = new JButton[] {
+            button("menu.product.add", this::addProduct),
+            button("menu.product.remove", this::removeProductByParameter),
+            button("menu.product.list", this::openProductListWindow),
+            button("menu.product.export", this::exportProductsToCsv),
+            button("menu.product.back", this::openMainCard)
         };
-
-        JTable table = new JTable(productTableModel);
-        setTableLeftAlignment(table);
-
-        panel.add(topButtons, BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-
-        refreshProductTable();
-        return panel;
+        return createVerticalMenu(messages.get("menu.product.title"), buttons, 60);
     }
 
     private JPanel createAccountingPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-
-        JPanel topButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton addButton = new JButton(messages.get("menu.accounting.add"));
-        JButton listButton = new JButton(messages.get("menu.accounting.list"));
-        JButton exportButton = new JButton(messages.get("menu.accounting.export"));
-        JButton backButton = new JButton(messages.get("menu.accounting.back"));
-
-        addButton.addActionListener(e -> addAccountingMovement());
-        listButton.addActionListener(e -> refreshAccountingTable());
-        exportButton.addActionListener(e -> exportAccountingToCsv());
-        backButton.addActionListener(e -> showCard("MAIN"));
-
-        topButtons.add(addButton);
-        topButtons.add(listButton);
-        topButtons.add(exportButton);
-        topButtons.add(backButton);
-
-        accountingTableModel = new DefaultTableModel(new Object[] { "ID", "DESCRIPCION", "TIPO", "VALOR", "FECHA HORA" },
-                0) {
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
+        JButton[] buttons = new JButton[] {
+            button("menu.accounting.add", this::addAccountingMovement),
+            button("menu.accounting.list", this::openAccountingListWindow),
+            button("menu.accounting.export", this::exportAccountingToCsv),
+            button("menu.accounting.back", this::openMainCard)
         };
+        return createVerticalMenu(messages.get("menu.accounting.title"), buttons, 60);
+    }
 
-        JTable table = new JTable(accountingTableModel);
-        setTableLeftAlignment(table);
-
-        accountingTotalLabel = new JLabel(messages.get("accounting.list.total") + " 0");
-
-        panel.add(topButtons, BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        panel.add(accountingTotalLabel, BorderLayout.SOUTH);
-
-        refreshAccountingTable();
+    private JPanel createVerticalMenu(String titleText, JButton[] buttons, int verticalPadding) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(new JLabel(titleText, SwingConstants.CENTER), BorderLayout.NORTH);
+        panel.add(createCenteredButtons(buttons, verticalPadding), BorderLayout.CENTER);
         return panel;
     }
 
+    private JPanel createCenteredButtons(JButton[] buttons, int verticalPadding) {
+        JPanel grid = new JPanel(new GridLayout(buttons.length, 1, 12, 12));
+        for (int i = 0; i < buttons.length; i++) {
+            grid.add(buttons[i]);
+        }
+        JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, verticalPadding));
+        center.add(grid);
+        return center;
+    }
+
+    private JButton button(String key, Runnable action) {
+        JButton button = new JButton(messages.get(key));
+        button.addActionListener(e -> action.run());
+        return button;
+    }
+
     private void addPerson() {
+        PersonFormData data = readPersonFormData();
+        if (data == null) {
+            return;
+        }
+        ActionResult result = menuMediator.registerPerson(data.names, data.lastNames, data.gender, data.birthDate);
+        showMessage(result.getMessage());
+    }
+
+    private PersonFormData readPersonFormData() {
         JTextField namesField = new JTextField();
         JTextField lastNamesField = new JTextField();
         JComboBox<String> genderCombo = new JComboBox<String>(new String[] { "Masculino", "Femenino" });
         JTextField birthDateField = new JTextField();
-
-        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
-        form.add(new JLabel(messages.get("person.prompt.names")));
-        form.add(namesField);
-        form.add(new JLabel(messages.get("person.prompt.lastNames")));
-        form.add(lastNamesField);
-        form.add(new JLabel(messages.get("person.prompt.gender")));
-        form.add(genderCombo);
-        form.add(new JLabel(messages.get("person.prompt.birthDate")));
-        form.add(birthDateField);
-
-        int result = JOptionPane.showConfirmDialog(this, form, messages.get("menu.person.add"),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result != JOptionPane.OK_OPTION) {
-            return;
+        JPanel form = buildPersonForm(namesField, lastNamesField, genderCombo, birthDateField);
+        if (!confirmForm(form, "menu.person.add")) {
+            return null;
         }
-
-        String names = safeTrim(namesField.getText());
-        String lastNames = safeTrim(lastNamesField.getText());
-        String gender = String.valueOf(genderCombo.getSelectedItem());
-        String birthDate = safeTrim(birthDateField.getText());
-
-        if (!isValidLength(names, personModel.getMinNamesLength(), personModel.getMaxNamesLength())) {
-            showMessage(messages.get("person.error.namesLength") + " " + personModel.getMinNamesLength() + " - "
-                    + personModel.getMaxNamesLength());
-            return;
-        }
-
-        if (!isValidLength(lastNames, personModel.getMinLastNamesLength(), personModel.getMaxLastNamesLength())) {
-            showMessage(messages.get("person.error.lastNamesLength") + " " + personModel.getMinLastNamesLength() + " - "
-                    + personModel.getMaxLastNamesLength());
-            return;
-        }
-
-        if (!isValidBirthDate(birthDate)) {
-            showMessage(messages.get("person.error.birthDate"));
-            return;
-        }
-
-        Person person = personModel.createPerson(names, lastNames, gender, birthDate);
-        showMessage(messages.get("person.success.created") + " " + person.getId());
-        refreshPersonTable();
+        return new PersonFormData(safeTrim(namesField.getText()), safeTrim(lastNamesField.getText()),
+                String.valueOf(genderCombo.getSelectedItem()), safeTrim(birthDateField.getText()));
     }
 
-    private void removePerson() {
-        Person removed = personModel.removeNextPerson();
-        if (removed == null) {
-            showMessage(messages.get("person.remove.empty"));
-            return;
-        }
-
-        showMessage(messages.get("person.remove.success") + " " + removed.getNames() + " " + removed.getLastNames());
-        int totalPages = calculateTotalPersonPages();
-        if (personPageIndex >= totalPages) {
-            personPageIndex = Math.max(0, totalPages - 1);
-        }
-        refreshPersonTable();
+    private JPanel buildPersonForm(JTextField namesField, JTextField lastNamesField, JComboBox<String> genderCombo,
+            JTextField birthDateField) {
+        JPanel form = createFormPanel();
+        addFormRow(form, "person.prompt.names", namesField);
+        addFormRow(form, "person.prompt.lastNames", lastNamesField);
+        addFormRow(form, "person.prompt.gender", genderCombo);
+        addFormRow(form, "person.prompt.birthDate", birthDateField);
+        return form;
     }
 
-    private void refreshPersonTable() {
-        personTableModel.setRowCount(0);
-        List<Person> people = personModel.getPeople();
-        int pageSize = personModel.getPageSize();
-        int totalPages = calculateTotalPersonPages();
-        if (personPageIndex >= totalPages) {
-            personPageIndex = Math.max(0, totalPages - 1);
+    private void removePersonByParameter() {
+        String param = readInput("person.remove.prompt.parameter");
+        if (isBlank(param)) {
+            return;
         }
+        ActionResult result = menuMediator.removePersonByParameter(param.trim());
+        showMessage(result.getMessage());
+    }
 
-        int start = personPageIndex * pageSize;
+    private void removeLastPerson() {
+        ActionResult result = menuMediator.removeLastPerson();
+        showMessage(result.getMessage());
+    }
+
+    private void openPersonListWindow() {
+        PersonListContext context = createPersonListContext();
+        configurePersonPager(context);
+        refreshPersonList(context);
+        showListWindow(context.frame, context.table, context.bottomPanel);
+    }
+
+    private PersonListContext createPersonListContext() {
+        JFrame frame = createListFrame("menu.person.list");
+        DefaultTableModel model = createPersonTableModel();
+        JTable table = createAlignedTable(model);
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JLabel pageLabel = new JLabel("1/1");
+        int[] pageIndex = new int[] { 0 };
+        JButton prevButton = new JButton("<");
+        JButton nextButton = new JButton(">");
+        bottomPanel.add(prevButton);
+        bottomPanel.add(pageLabel);
+        bottomPanel.add(nextButton);
+        return new PersonListContext(frame, table, model, bottomPanel, pageLabel, pageIndex, prevButton, nextButton);
+    }
+
+    private DefaultTableModel createPersonTableModel() {
+        Object[] columns = new Object[] { messages.get("person.list.col.names"), messages.get("person.list.col.lastNames"),
+            messages.get("person.list.col.gender"), messages.get("person.list.col.age") };
+        return nonEditableModel(columns);
+    }
+
+    private void configurePersonPager(PersonListContext context) {
+        context.prevButton.addActionListener(e -> goPreviousPersonPage(context));
+        context.nextButton.addActionListener(e -> goNextPersonPage(context));
+    }
+
+    private void goPreviousPersonPage(PersonListContext context) {
+        if (context.pageIndex[0] <= 0) {
+            return;
+        }
+        context.pageIndex[0]--;
+        refreshPersonList(context);
+    }
+
+    private void goNextPersonPage(PersonListContext context) {
+        if (context.pageIndex[0] >= totalPersonPages() - 1) {
+            return;
+        }
+        context.pageIndex[0]++;
+        refreshPersonList(context);
+    }
+
+    private void refreshPersonList(PersonListContext context) {
+        context.model.setRowCount(0);
+        List<Person> people = menuMediator.getPeople();
+        int totalPages = adjustPersonPageIndex(context, people);
+        addPersonRows(context.model, people, context.pageIndex[0], menuMediator.getPersonPageSize());
+        context.pageLabel.setText((context.pageIndex[0] + 1) + "/" + totalPages);
+    }
+
+    private int adjustPersonPageIndex(PersonListContext context, List<Person> people) {
+        int totalPages = calculatePages(people.size(), menuMediator.getPersonPageSize());
+        if (context.pageIndex[0] >= totalPages) {
+            context.pageIndex[0] = Math.max(0, totalPages - 1);
+        }
+        return totalPages;
+    }
+
+    private void addPersonRows(DefaultTableModel model, List<Person> people, int pageIndex, int pageSize) {
+        int start = pageIndex * pageSize;
         int end = Math.min(start + pageSize, people.size());
-
         for (int index = start; index < end; index++) {
             Person person = people.get(index);
-            personTableModel.addRow(new Object[] {
-                person.getNames(),
-                person.getLastNames(),
-                person.getGender(),
-                Integer.valueOf(calculateAge(person.getBirthDate()))
-            });
+            model.addRow(new Object[] { person.getNames(), person.getLastNames(), person.getGender(),
+                Integer.valueOf(calculateAge(person.getBirthDate())) });
         }
-
-        personPageLabel.setText((totalPages == 0 ? 0 : personPageIndex + 1) + "/" + totalPages);
     }
 
-    private int calculateTotalPersonPages() {
-        int size = personModel.getPeople().size();
-        int pageSize = personModel.getPageSize();
-        if (size == 0) {
-            return 1;
-        }
-        return (size + pageSize - 1) / pageSize;
+    private int totalPersonPages() {
+        return calculatePages(menuMediator.getPeople().size(), menuMediator.getPersonPageSize());
+    }
+
+    private int calculatePages(int size, int pageSize) {
+        return size == 0 ? 1 : (size + pageSize - 1) / pageSize;
     }
 
     private void exportPeopleToCsv() {
-        List<Person> people = personModel.getPeople();
+        List<Person> people = menuMediator.getPeople();
         if (people.isEmpty()) {
             showMessage(messages.get("person.export.empty"));
             return;
         }
-
         File file = chooseExportFile("personas.csv");
-        if (file == null) {
-            return;
-        }
-
-        BufferedWriter writer = null;
-        try {
-            writer = new BufferedWriter(new FileWriter(file));
-            writer.write("id,nombres,apellidos,genero,fecha_nacimiento");
-            writer.newLine();
-
-            for (int i = 0; i < people.size(); i++) {
-                Person person = people.get(i);
-                writer.write(person.getId() + "," + escapeCsv(person.getNames()) + "," + escapeCsv(person.getLastNames())
-                        + "," + escapeCsv(person.getGender()) + "," + escapeCsv(person.getBirthDate()));
-                writer.newLine();
-            }
-            showMessage(messages.get("person.export.success") + " " + file.getAbsolutePath());
-        } catch (IOException exception) {
-            showMessage(messages.get("person.export.error") + " " + exception.getMessage());
-        } finally {
-            closeQuietly(writer);
+        if (file != null) {
+            showMessage(menuMediator.exportPeople(file).getMessage());
         }
     }
 
     private void addProduct() {
+        ProductFormData data = readProductFormData();
+        if (data == null || data.price == null || data.quantity == null) {
+            return;
+        }
+        ActionResult result = menuMediator.registerProduct(data.description, data.unit, data.quantity, data.price);
+        showMessage(result.getMessage());
+    }
+
+    private ProductFormData readProductFormData() {
         JTextField descriptionField = new JTextField();
         JComboBox<String> unitCombo = new JComboBox<String>(new String[] { "libra", "kilos", "bultos", "toneladas" });
+        JTextField quantityField = new JTextField();
         JTextField priceField = new JTextField();
-
-        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
-        form.add(new JLabel(messages.get("product.prompt.description")));
-        form.add(descriptionField);
-        form.add(new JLabel(messages.get("product.prompt.unit")));
-        form.add(unitCombo);
-        form.add(new JLabel(messages.get("product.prompt.price")));
-        form.add(priceField);
-
-        int result = JOptionPane.showConfirmDialog(this, form, messages.get("menu.product.add"),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result != JOptionPane.OK_OPTION) {
-            return;
+        JPanel form = buildProductForm(descriptionField, unitCombo, quantityField, priceField);
+        if (!confirmForm(form, "menu.product.add")) {
+            return null;
         }
+        BigDecimal quantity = parseDecimal(quantityField.getText(), "product.error.quantity");
+        BigDecimal price = parseDecimal(priceField.getText(), "product.error.price");
+        return new ProductFormData(safeTrim(descriptionField.getText()), String.valueOf(unitCombo.getSelectedItem()), quantity, price);
+    }
 
-        BigDecimal price;
+    private JPanel buildProductForm(JTextField descriptionField, JComboBox<String> unitCombo, JTextField quantityField,
+            JTextField priceField) {
+        JPanel form = createFormPanel();
+        addFormRow(form, "product.prompt.description", descriptionField);
+        addFormRow(form, "product.prompt.unit", unitCombo);
+        addFormRow(form, "product.prompt.quantity", quantityField);
+        addFormRow(form, "product.prompt.price", priceField);
+        return form;
+    }
+
+    private BigDecimal parseDecimal(String raw, String errorKey) {
         try {
-            price = new BigDecimal(safeTrim(priceField.getText()));
+            return new BigDecimal(safeTrim(raw));
         } catch (Exception exception) {
-            showMessage(messages.get("product.error.price"));
-            return;
-        }
-
-        try {
-            Product product = productModel.createProduct(safeTrim(descriptionField.getText()),
-                    String.valueOf(unitCombo.getSelectedItem()), price);
-            showMessage(messages.get("product.success.created") + " " + product.getId());
-            refreshProductTable();
-        } catch (IllegalArgumentException exception) {
-            showMessage(messages.get("product.error.validation") + " " + exception.getMessage());
+            showMessage(messages.get(errorKey));
+            return null;
         }
     }
 
-    private void removeProduct() {
-        String idText = JOptionPane.showInputDialog(this, messages.get("product.remove.prompt.id"));
-        if (idText == null) {
+    private void removeProductByParameter() {
+        String param = readInput("product.remove.prompt.parameter");
+        if (isBlank(param)) {
             return;
         }
-
-        int id;
-        try {
-            id = Integer.parseInt(idText.trim());
-        } catch (Exception exception) {
-            showMessage(messages.get("product.remove.invalidId"));
-            return;
-        }
-
-        Product removed = productModel.removeProductById(id);
-        if (removed == null) {
-            showMessage(messages.get("product.remove.notFound"));
-            return;
-        }
-
-        showMessage(messages.get("product.remove.success") + " id=" + removed.getId() + " | " + removed.getDescription());
-        refreshProductTable();
+        ActionResult result = menuMediator.removeProductByParameter(param.trim());
+        showMessage(result.getMessage());
     }
 
-    private void refreshProductTable() {
-        productTableModel.setRowCount(0);
-        List<Product> products = productModel.getProducts();
+    private void openProductListWindow() {
+        JFrame frame = createListFrame("menu.product.list");
+        DefaultTableModel model = nonEditableModel(new Object[] { "ID", "DESCRIPCION", "UNIDAD", "CANTIDAD", "PRECIO" });
+        addProductRows(model, menuMediator.getProducts());
+        JTable table = createAlignedTable(model);
+        showListWindow(frame, table, null);
+    }
+
+    private void addProductRows(DefaultTableModel model, List<Product> products) {
         for (int i = 0; i < products.size(); i++) {
             Product product = products.get(i);
-            productTableModel.addRow(new Object[] {
-                Integer.valueOf(product.getId()),
-                product.getDescription(),
-                product.getUnit(),
-                product.getPrice().toPlainString()
-            });
+            model.addRow(new Object[] { Integer.valueOf(product.getId()), product.getDescription(), product.getUnit(),
+                product.getQuantity().toPlainString(), product.getPrice().toPlainString() });
         }
     }
 
     private void exportProductsToCsv() {
-        List<Product> products = productModel.getProducts();
+        List<Product> products = menuMediator.getProducts();
         if (products.isEmpty()) {
             showMessage(messages.get("product.export.empty"));
             return;
         }
-
         File file = chooseExportFile("productos.csv");
-        if (file == null) {
-            return;
-        }
-
-        BufferedWriter writer = null;
-        try {
-            writer = new BufferedWriter(new FileWriter(file));
-            writer.write("id,descripcion,unidad,precio");
-            writer.newLine();
-            for (int i = 0; i < products.size(); i++) {
-                Product product = products.get(i);
-                writer.write(product.getId() + "," + escapeCsv(product.getDescription()) + ","
-                        + escapeCsv(product.getUnit()) + "," + product.getPrice().toPlainString());
-                writer.newLine();
-            }
-            showMessage(messages.get("product.export.success") + " " + file.getAbsolutePath());
-        } catch (IOException exception) {
-            showMessage(messages.get("product.export.error") + " " + exception.getMessage());
-        } finally {
-            closeQuietly(writer);
+        if (file != null) {
+            showMessage(menuMediator.exportProducts(file).getMessage());
         }
     }
 
     private void addAccountingMovement() {
+        AccountingFormData data = readAccountingFormData();
+        if (data == null || data.value == null) {
+            return;
+        }
+        if (!isValidDateTime(data.dateTime)) {
+            showMessage(messages.get("accounting.error.datetime"));
+            return;
+        }
+        createAccountingMovement(data);
+    }
+
+    private void createAccountingMovement(AccountingFormData data) {
+        ActionResult result = menuMediator.registerMovement(data.description, data.type, data.value, data.dateTime);
+        showMessage(result.getMessage());
+    }
+
+    private AccountingFormData readAccountingFormData() {
         JTextField descriptionField = new JTextField();
         JComboBox<String> typeCombo = new JComboBox<String>(new String[] { "Ingreso", "Egreso" });
         JTextField valueField = new JTextField();
         JTextField dateTimeField = new JTextField();
-
-        JPanel form = new JPanel(new GridLayout(0, 2, 8, 8));
-        form.add(new JLabel(messages.get("accounting.prompt.description")));
-        form.add(descriptionField);
-        form.add(new JLabel(messages.get("accounting.prompt.type")));
-        form.add(typeCombo);
-        form.add(new JLabel(messages.get("accounting.prompt.value")));
-        form.add(valueField);
-        form.add(new JLabel(messages.get("accounting.prompt.datetime")));
-        form.add(dateTimeField);
-
-        int result = JOptionPane.showConfirmDialog(this, form, messages.get("menu.accounting.add"),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result != JOptionPane.OK_OPTION) {
-            return;
+        JPanel form = buildAccountingForm(descriptionField, typeCombo, valueField, dateTimeField);
+        if (!confirmForm(form, "menu.accounting.add")) {
+            return null;
         }
-
-        BigDecimal value;
-        try {
-            value = new BigDecimal(safeTrim(valueField.getText()));
-        } catch (Exception exception) {
-            showMessage(messages.get("accounting.error.value"));
-            return;
-        }
-
-        String dateTime = safeTrim(dateTimeField.getText());
-        if (!isValidDateTime(dateTime)) {
-            showMessage(messages.get("accounting.error.datetime"));
-            return;
-        }
-
-        try {
-            accountingModel.createMovement(safeTrim(descriptionField.getText()), String.valueOf(typeCombo.getSelectedItem()),
-                    value, dateTime);
-            showMessage(messages.get("accounting.success.created"));
-            refreshAccountingTable();
-        } catch (IllegalArgumentException exception) {
-            showMessage(messages.get("accounting.error.validation") + " " + exception.getMessage());
-        }
+        BigDecimal value = parseDecimal(valueField.getText(), "accounting.error.value");
+        return new AccountingFormData(safeTrim(descriptionField.getText()), String.valueOf(typeCombo.getSelectedItem()),
+                value, safeTrim(dateTimeField.getText()));
     }
 
-    private void refreshAccountingTable() {
-        accountingTableModel.setRowCount(0);
-        List<AccountingMovement> movements = accountingModel.getMovementsLifo();
+    private JPanel buildAccountingForm(JTextField descriptionField, JComboBox<String> typeCombo, JTextField valueField,
+            JTextField dateTimeField) {
+        JPanel form = createFormPanel();
+        addFormRow(form, "accounting.prompt.description", descriptionField);
+        addFormRow(form, "accounting.prompt.type", typeCombo);
+        addFormRow(form, "accounting.prompt.value", valueField);
+        addFormRow(form, "accounting.prompt.datetime", dateTimeField);
+        return form;
+    }
 
-        BigDecimal total = BigDecimal.ZERO;
+    private void openAccountingListWindow() {
+        JFrame frame = createListFrame("menu.accounting.list");
+        DefaultTableModel model = nonEditableModel(new Object[] { "ID", "DESCRIPCION", "TIPO", "VALOR", "FECHA HORA" });
+        List<AccountingMovement> movements = menuMediator.getMovementsLifo();
+        BigDecimal total = addAccountingRows(model, movements);
+        JTable table = createAlignedTable(model);
+        JLabel totalLabel = new JLabel(messages.get("accounting.list.total") + " " + total.toPlainString());
+        showListWindow(frame, table, totalLabel);
+    }
+
+    private BigDecimal addAccountingRows(DefaultTableModel model, List<AccountingMovement> movements) {
         for (int i = 0; i < movements.size(); i++) {
             AccountingMovement movement = movements.get(i);
-            accountingTableModel.addRow(new Object[] {
-                Integer.valueOf(movement.getId()),
-                movement.getDescription(),
-                movement.getMovementType(),
-                movement.getValue().toPlainString(),
-                movement.getDateTime()
-            });
-
-            if ("Ingreso".equalsIgnoreCase(movement.getMovementType())) {
-                total = total.add(movement.getValue());
-            } else {
-                total = total.subtract(movement.getValue());
-            }
+            model.addRow(new Object[] { Integer.valueOf(movement.getId()), movement.getDescription(), movement.getMovementType(),
+                movement.getValue().toPlainString(), movement.getDateTime() });
         }
-
-        accountingTotalLabel.setText(messages.get("accounting.list.total") + " " + total.toPlainString());
+        return menuMediator.calculateAccountingTotal(movements);
     }
 
     private void exportAccountingToCsv() {
-        List<AccountingMovement> movements = accountingModel.getMovementsLifo();
+        List<AccountingMovement> movements = menuMediator.getMovementsLifo();
         if (movements.isEmpty()) {
             showMessage(messages.get("accounting.export.empty"));
             return;
         }
-
         File file = chooseExportFile("contabilidad.csv");
-        if (file == null) {
-            return;
+        if (file != null) {
+            showMessage(menuMediator.exportAccounting(file).getMessage());
         }
+    }
 
-        BufferedWriter writer = null;
-        try {
-            writer = new BufferedWriter(new FileWriter(file));
-            writer.write("id,descripcion,tipo,valor,fecha_hora");
-            writer.newLine();
-            for (int i = 0; i < movements.size(); i++) {
-                AccountingMovement movement = movements.get(i);
-                writer.write(movement.getId() + "," + escapeCsv(movement.getDescription()) + ","
-                        + escapeCsv(movement.getMovementType()) + "," + movement.getValue().toPlainString() + ","
-                        + escapeCsv(movement.getDateTime()));
-                writer.newLine();
-            }
-            showMessage(messages.get("accounting.export.success") + " " + file.getAbsolutePath());
-        } catch (IOException exception) {
-            showMessage(messages.get("accounting.export.error") + " " + exception.getMessage());
-        } finally {
-            closeQuietly(writer);
+    private void showListWindow(JFrame frame, JTable table, java.awt.Component south) {
+        frame.setLayout(new BorderLayout());
+        frame.add(new JScrollPane(table), BorderLayout.CENTER);
+        if (south != null) {
+            frame.add(south, BorderLayout.SOUTH);
         }
+        frame.setVisible(true);
+    }
+
+    private JFrame createListFrame(String titleKey) {
+        JFrame frame = new JFrame(messages.get(titleKey));
+        frame.setSize(760, 420);
+        frame.setLocationRelativeTo(this);
+        return frame;
+    }
+
+    private JTable createAlignedTable(DefaultTableModel model) {
+        JTable table = new JTable(model);
+        setTableLeftAlignment(table);
+        return table;
+    }
+
+    private DefaultTableModel nonEditableModel(Object[] columns) {
+        return new DefaultTableModel(columns, 0) {
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
+
+    private JPanel createFormPanel() {
+        return new JPanel(new GridLayout(0, 2, 8, 8));
+    }
+
+    private void addFormRow(JPanel form, String key, java.awt.Component field) {
+        form.add(new JLabel(messages.get(key)));
+        form.add(field);
+    }
+
+    private boolean confirmForm(JPanel form, String titleKey) {
+        int result = JOptionPane.showConfirmDialog(this, form, messages.get(titleKey), JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+        return result == JOptionPane.OK_OPTION;
+    }
+
+    private String readInput(String key) {
+        return JOptionPane.showInputDialog(this, messages.get(key));
     }
 
     private void setTableLeftAlignment(JTable table) {
@@ -611,6 +484,22 @@ public class MainFrame extends JFrame {
         for (int index = 0; index < table.getColumnCount(); index++) {
             table.getColumnModel().getColumn(index).setCellRenderer(leftRenderer);
         }
+    }
+
+    private void openMainCard() {
+        showCard("MAIN");
+    }
+
+    private void openPersonCard() {
+        showCard("PERSON");
+    }
+
+    private void openProductCard() {
+        showCard("PRODUCT");
+    }
+
+    private void openAccountingCard() {
+        showCard("ACCOUNTING");
     }
 
     private void showCard(String cardName) {
@@ -624,8 +513,7 @@ public class MainFrame extends JFrame {
     private File chooseExportFile(String defaultFileName) {
         JFileChooser chooser = new JFileChooser();
         chooser.setSelectedFile(new File(defaultFileName));
-        int result = chooser.showSaveDialog(this);
-        if (result != JFileChooser.APPROVE_OPTION) {
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
             return null;
         }
         return chooser.getSelectedFile();
@@ -635,8 +523,7 @@ public class MainFrame extends JFrame {
         if (value == null) {
             return "";
         }
-        String escaped = value.replace("\"", "\"\"");
-        return "\"" + escaped + "\"";
+        return "\"" + value.replace("\"", "\"\"") + "\"";
     }
 
     private String safeTrim(String value) {
@@ -646,34 +533,30 @@ public class MainFrame extends JFrame {
         return value.trim();
     }
 
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     private boolean isValidLength(String value, int minLength, int maxLength) {
         return value != null && value.length() >= minLength && value.length() <= maxLength;
     }
 
     private boolean isValidBirthDate(String date) {
-        if (date == null || date.trim().isEmpty()) {
-            return false;
-        }
-
-        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");
-        formatter.setLenient(false);
-        try {
-            formatter.parse(date);
-            return true;
-        } catch (ParseException exception) {
-            return false;
-        }
+        return isValidDate(date, "dd/MM/yyyy");
     }
 
     private boolean isValidDateTime(String dateTime) {
-        if (dateTime == null || dateTime.trim().isEmpty()) {
+        return isValidDate(dateTime, "dd/MM/yyyy HH:mm");
+    }
+
+    private boolean isValidDate(String raw, String pattern) {
+        if (isBlank(raw)) {
             return false;
         }
-
-        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+        SimpleDateFormat formatter = new SimpleDateFormat(pattern);
         formatter.setLenient(false);
         try {
-            formatter.parse(dateTime.trim());
+            formatter.parse(raw.trim());
             return true;
         } catch (ParseException exception) {
             return false;
@@ -690,12 +573,78 @@ public class MainFrame extends JFrame {
     }
 
     private void closeQuietly(BufferedWriter writer) {
-        if (writer != null) {
-            try {
-                writer.close();
-            } catch (IOException ignored) {
-                showMessage("No se pudo cerrar archivo.");
-            }
+        if (writer == null) {
+            return;
+        }
+        try {
+            writer.close();
+        } catch (IOException ignored) {
+            showMessage("No se pudo cerrar archivo.");
+        }
+    }
+
+    private static final class PersonFormData {
+        private final String names;
+        private final String lastNames;
+        private final String gender;
+        private final String birthDate;
+
+        private PersonFormData(String names, String lastNames, String gender, String birthDate) {
+            this.names = names;
+            this.lastNames = lastNames;
+            this.gender = gender;
+            this.birthDate = birthDate;
+        }
+    }
+
+    private static final class ProductFormData {
+        private final String description;
+        private final String unit;
+        private final BigDecimal quantity;
+        private final BigDecimal price;
+
+        private ProductFormData(String description, String unit, BigDecimal quantity, BigDecimal price) {
+            this.description = description;
+            this.unit = unit;
+            this.quantity = quantity;
+            this.price = price;
+        }
+    }
+
+    private static final class AccountingFormData {
+        private final String description;
+        private final String type;
+        private final BigDecimal value;
+        private final String dateTime;
+
+        private AccountingFormData(String description, String type, BigDecimal value, String dateTime) {
+            this.description = description;
+            this.type = type;
+            this.value = value;
+            this.dateTime = dateTime;
+        }
+    }
+
+    private static final class PersonListContext {
+        private final JFrame frame;
+        private final JTable table;
+        private final DefaultTableModel model;
+        private final JPanel bottomPanel;
+        private final JLabel pageLabel;
+        private final int[] pageIndex;
+        private final JButton prevButton;
+        private final JButton nextButton;
+
+        private PersonListContext(JFrame frame, JTable table, DefaultTableModel model, JPanel bottomPanel, JLabel pageLabel,
+                int[] pageIndex, JButton prevButton, JButton nextButton) {
+            this.frame = frame;
+            this.table = table;
+            this.model = model;
+            this.bottomPanel = bottomPanel;
+            this.pageLabel = pageLabel;
+            this.pageIndex = pageIndex;
+            this.prevButton = prevButton;
+            this.nextButton = nextButton;
         }
     }
 }

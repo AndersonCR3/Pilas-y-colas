@@ -1,0 +1,27 @@
+# Maven / Java build
+/target/
+*.class
+
+# Logs
+*.log
+logs/
+
+# IDE files
+/.idea/
+*.iml
+/.project
+/.classpath
+/.settings/
+
+# VS Code local settings
+/.vscode/*
+!/.vscode/extensions.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local runtime overrides (optional)
+/config/*.local.properties
+/config/*.local.yml
+/config/*.local.yaml

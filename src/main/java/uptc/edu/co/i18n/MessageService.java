@@ -25,25 +25,65 @@ public class MessageService {
     }
 
     private void loadDefaultMessages(String locale) {
-        String fileName = "i18n/messages_" + locale + ".properties";
-        InputStream input = null;
-        try {
-            input = getClass().getClassLoader().getResourceAsStream(fileName);
-            if (input == null) {
-                input = getClass().getClassLoader().getResourceAsStream("i18n/messages_es.properties");
-            }
+        InputStream input = openDefaultMessages(locale);
+        if (input == null) {
+            LOGGER.warn("No se encontro archivo de mensajes por defecto.");
+            return;
+        }
+        loadDefaultMessagesFromStream(input, locale);
+    }
 
-            if (input != null) {
-                messages.load(input);
-                LOGGER.info("Mensajes por defecto cargados para locale {}", locale);
-            } else {
-                LOGGER.warn("No se encontro archivo de mensajes por defecto.");
-            }
+    private void loadDefaultMessagesFromStream(InputStream input, String locale) {
+        try {
+            messages.load(input);
+            LOGGER.info("Mensajes por defecto cargados para locale {}", locale);
         } catch (IOException exception) {
             LOGGER.error("Error cargando mensajes por defecto.", exception);
         } finally {
             closeQuietly(input);
         }
+    }
+
+    private InputStream openDefaultMessages(String locale) {
+        InputStream input = openClassPathMessages(locale);
+        if (input != null) {
+            return input;
+        }
+        return openFileSystemMessages(locale);
+    }
+
+    private InputStream openClassPathMessages(String locale) {
+        String fileName = buildLocaleFileName(locale);
+        InputStream input = getClass().getClassLoader().getResourceAsStream(fileName);
+        if (input != null) {
+            return input;
+        }
+        return getClass().getClassLoader().getResourceAsStream("i18n/messages_es.properties");
+    }
+
+    private InputStream openFileSystemMessages(String locale) {
+        InputStream input = openFile("src/main/resources/" + buildLocaleFileName(locale));
+        if (input != null) {
+            return input;
+        }
+        return openFile("src/main/resources/i18n/messages_es.properties");
+    }
+
+    private InputStream openFile(String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            return null;
+        }
+        try {
+            return new FileInputStream(file);
+        } catch (IOException exception) {
+            LOGGER.error("No se pudo abrir archivo de mensajes {}", path, exception);
+            return null;
+        }
+    }
+
+    private String buildLocaleFileName(String locale) {
+        return "i18n/messages_" + locale + ".properties";
     }
 
     private void loadExternalMessages(File externalConfigDir, String locale) {
@@ -52,19 +92,26 @@ public class MessageService {
             LOGGER.info("No existe archivo externo de mensajes: {}", externalFile.getAbsolutePath());
             return;
         }
+        loadExternalMessagesFromFile(externalFile);
+    }
 
-        FileInputStream input = null;
+    private void loadExternalMessagesFromFile(File externalFile) {
+        InputStream input = null;
         try {
             input = new FileInputStream(externalFile);
-            Properties external = new Properties();
-            external.load(input);
-            messages.putAll(external);
+            mergeExternalMessages(input);
             LOGGER.info("Mensajes externos cargados desde {}", externalFile.getAbsolutePath());
         } catch (IOException exception) {
             LOGGER.error("Error cargando mensajes externos.", exception);
         } finally {
             closeQuietly(input);
         }
+    }
+
+    private void mergeExternalMessages(InputStream input) throws IOException {
+        Properties external = new Properties();
+        external.load(input);
+        messages.putAll(external);
     }
 
     public String get(String key) {

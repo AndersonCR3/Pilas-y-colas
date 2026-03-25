@@ -11,6 +11,12 @@ public interface IPersonModel {
 
     Person removeNextPerson();
 
+    Person removePersonById(int id);
+
+    Person removePersonByName(String names);
+
+    Person removeLastPerson();
+
     List<Person> getPeople();
 
     int getMinNamesLength();
