@@ -37,18 +37,25 @@ import uptc.edu.co.pojo.AccountingMovement;
 import uptc.edu.co.pojo.Person;
 import uptc.edu.co.pojo.Product;
 import uptc.edu.co.presenter.ActionResult;
+import uptc.edu.co.view.components.MenuButtonFactory;
+import uptc.edu.co.view.panels.AccountingMenuPanel;
+import uptc.edu.co.view.panels.MainMenuPanel;
+import uptc.edu.co.view.panels.PersonMenuPanel;
+import uptc.edu.co.view.panels.ProductMenuPanel;
 
 public class MainFrame extends JFrame {
     private static final DateTimeFormatter BIRTH_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final MessageService messages;
     private final GuiMenuMediator menuMediator;
+    private final MenuButtonFactory buttonFactory;
     private final CardLayout cardLayout;
     private final JPanel cardPanel;
 
     public MainFrame(MessageService messages, GuiMenuMediator menuMediator) {
         this.messages = messages;
         this.menuMediator = menuMediator;
+        this.buttonFactory = new MenuButtonFactory();
         this.cardLayout = new CardLayout();
         this.cardPanel = new JPanel(cardLayout);
         initializeFrame();
@@ -66,75 +73,29 @@ public class MainFrame extends JFrame {
 
     private void initializeCards() {
         cardPanel.add(createMainMenuPanel(), "MAIN");
-        cardPanel.add(createPersonPanel(), "PERSON");
-        cardPanel.add(createProductPanel(), "PRODUCT");
-        cardPanel.add(createAccountingPanel(), "ACCOUNTING");
+        cardPanel.add(createPersonMenuPanel(), "PERSON");
+        cardPanel.add(createProductMenuPanel(), "PRODUCT");
+        cardPanel.add(createAccountingMenuPanel(), "ACCOUNTING");
     }
 
     private JPanel createMainMenuPanel() {
-        JButton[] buttons = new JButton[] {
-            button("menu.main.persons", this::openPersonCard),
-            button("menu.main.products", this::openProductCard),
-            button("menu.main.accounting", this::openAccountingCard),
-            button("menu.main.exit", this::dispose)
-        };
-        return createVerticalMenu(messages.get("menu.main.title"), buttons, 80);
+        return new MainMenuPanel(messages, buttonFactory, this::openPersonCard, this::openProductCard,
+                this::openAccountingCard, this::dispose);
     }
 
-    private JPanel createPersonPanel() {
-        JButton[] buttons = new JButton[] {
-            button("menu.person.add", this::addPerson),
-            button("menu.person.remove", this::removePersonByParameter),
-            button("menu.person.removeLast", this::removeLastPerson),
-            button("menu.person.list", this::openPersonListWindow),
-            button("menu.person.export", this::exportPeopleToCsv),
-            button("menu.person.back", this::openMainCard)
-        };
-        return createVerticalMenu(messages.get("menu.person.title"), buttons, 60);
+    private JPanel createPersonMenuPanel() {
+        return new PersonMenuPanel(messages, buttonFactory, this::addPerson, this::removePersonByParameter,
+                this::removeLastPerson, this::openPersonListWindow, this::exportPeopleToCsv, this::openMainCard);
     }
 
-    private JPanel createProductPanel() {
-        JButton[] buttons = new JButton[] {
-            button("menu.product.add", this::addProduct),
-            button("menu.product.remove", this::removeProductByParameter),
-            button("menu.product.list", this::openProductListWindow),
-            button("menu.product.export", this::exportProductsToCsv),
-            button("menu.product.back", this::openMainCard)
-        };
-        return createVerticalMenu(messages.get("menu.product.title"), buttons, 60);
+    private JPanel createProductMenuPanel() {
+        return new ProductMenuPanel(messages, buttonFactory, this::addProduct, this::removeProductByParameter,
+                this::openProductListWindow, this::exportProductsToCsv, this::openMainCard);
     }
 
-    private JPanel createAccountingPanel() {
-        JButton[] buttons = new JButton[] {
-            button("menu.accounting.add", this::addAccountingMovement),
-            button("menu.accounting.list", this::openAccountingListWindow),
-            button("menu.accounting.export", this::exportAccountingToCsv),
-            button("menu.accounting.back", this::openMainCard)
-        };
-        return createVerticalMenu(messages.get("menu.accounting.title"), buttons, 60);
-    }
-
-    private JPanel createVerticalMenu(String titleText, JButton[] buttons, int verticalPadding) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.add(new JLabel(titleText, SwingConstants.CENTER), BorderLayout.NORTH);
-        panel.add(createCenteredButtons(buttons, verticalPadding), BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JPanel createCenteredButtons(JButton[] buttons, int verticalPadding) {
-        JPanel grid = new JPanel(new GridLayout(buttons.length, 1, 12, 12));
-        for (int i = 0; i < buttons.length; i++) {
-            grid.add(buttons[i]);
-        }
-        JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, verticalPadding));
-        center.add(grid);
-        return center;
-    }
-
-    private JButton button(String key, Runnable action) {
-        JButton button = new JButton(messages.get(key));
-        button.addActionListener(e -> action.run());
-        return button;
+    private JPanel createAccountingMenuPanel() {
+        return new AccountingMenuPanel(messages, buttonFactory, this::addAccountingMovement,
+                this::openAccountingListWindow, this::exportAccountingToCsv, this::openMainCard);
     }
 
     private void addPerson() {
