@@ -5,11 +5,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.List;
-
 import uptc.edu.co.i18n.MessageService;
 import uptc.edu.co.interfaces.IProductModel;
 import uptc.edu.co.pojo.Product;
+import uptc.edu.co.structures.DoubleList;
 
 public class ProductPresenter {
     private final IProductModel productModel;
@@ -38,12 +37,12 @@ public class ProductPresenter {
         return ActionResult.success(message);
     }
 
-    public List<Product> getProducts() {
+    public DoubleList<Product> getProducts() {
         return productModel.getProducts();
     }
 
     public ActionResult exportProducts(File file) {
-        List<Product> products = productModel.getProducts();
+        DoubleList<Product> products = productModel.getProducts();
         if (products.isEmpty()) {
             return ActionResult.failure(messages.get("product.export.empty"));
         }

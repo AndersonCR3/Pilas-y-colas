@@ -2,8 +2,6 @@ package uptc.edu.co.view.controllers;
 
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.List;
-
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JTable;
@@ -14,6 +12,7 @@ import uptc.edu.co.i18n.MessageService;
 import uptc.edu.co.mediator.GuiMenuMediator;
 import uptc.edu.co.pojo.Product;
 import uptc.edu.co.presenter.ActionResult;
+import uptc.edu.co.structures.DoubleList;
 
 public class ProductViewController extends AbstractViewController {
     private final GuiMenuMediator menuMediator;
@@ -52,7 +51,7 @@ public class ProductViewController extends AbstractViewController {
     }
 
     public void exportProductsToCsv() {
-        List<Product> products = menuMediator.getProducts();
+        DoubleList<Product> products = menuMediator.getProducts();
         if (products.isEmpty()) {
             showMessage(messages.get("product.export.empty"));
             return;
@@ -93,7 +92,7 @@ public class ProductViewController extends AbstractViewController {
         }
     }
 
-    private void addProductRows(DefaultTableModel model, List<Product> products) {
+    private void addProductRows(DefaultTableModel model, DoubleList<Product> products) {
         for (int index = 0; index < products.size(); index++) {
             Product product = products.get(index);
             model.addRow(new Object[] { Integer.valueOf(product.getId()), product.getDescription(),

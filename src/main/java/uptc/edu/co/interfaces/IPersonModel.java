@@ -1,8 +1,7 @@
 package uptc.edu.co.interfaces;
 
-import java.util.List;
-
 import uptc.edu.co.pojo.Person;
+import uptc.edu.co.structures.DoubleList;
 
 public interface IPersonModel {
     void addPerson(Person person);
@@ -17,7 +16,7 @@ public interface IPersonModel {
 
     Person removeLastPerson();
 
-    List<Person> getPeople();
+    DoubleList<Person> getPeople();
 
     int getMinNamesLength();
 

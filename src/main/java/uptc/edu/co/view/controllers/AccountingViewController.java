@@ -4,8 +4,6 @@ import java.io.File;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.List;
-
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -17,6 +15,7 @@ import uptc.edu.co.i18n.MessageService;
 import uptc.edu.co.mediator.GuiMenuMediator;
 import uptc.edu.co.pojo.AccountingMovement;
 import uptc.edu.co.presenter.ActionResult;
+import uptc.edu.co.structures.DoubleList;
 
 public class AccountingViewController extends AbstractViewController {
     private final GuiMenuMediator menuMediator;
@@ -44,7 +43,7 @@ public class AccountingViewController extends AbstractViewController {
         DefaultTableModel model = nonEditableModel(new Object[] { messages.get("accounting.list.col.id"),
             messages.get("accounting.list.col.description"), messages.get("accounting.list.col.type"),
             messages.get("accounting.list.col.value"), messages.get("accounting.list.col.datetime") });
-        List<AccountingMovement> movements = menuMediator.getMovementsLifo();
+        DoubleList<AccountingMovement> movements = menuMediator.getMovementsLifo();
         BigDecimal total = addAccountingRows(model, movements);
         JTable table = createAlignedTable(model);
         JLabel totalLabel = new JLabel(messages.get("accounting.list.total") + " " + total.toPlainString());
@@ -52,7 +51,7 @@ public class AccountingViewController extends AbstractViewController {
     }
 
     public void exportAccountingToCsv() {
-        List<AccountingMovement> movements = menuMediator.getMovementsLifo();
+        DoubleList<AccountingMovement> movements = menuMediator.getMovementsLifo();
         if (movements.isEmpty()) {
             showMessage(messages.get("accounting.export.empty"));
             return;
@@ -106,7 +105,7 @@ public class AccountingViewController extends AbstractViewController {
         }
     }
 
-    private BigDecimal addAccountingRows(DefaultTableModel model, List<AccountingMovement> movements) {
+    private BigDecimal addAccountingRows(DefaultTableModel model, DoubleList<AccountingMovement> movements) {
         for (int index = 0; index < movements.size(); index++) {
             AccountingMovement movement = movements.get(index);
             model.addRow(new Object[] { Integer.valueOf(movement.getId()), movement.getDescription(),

@@ -1,23 +1,21 @@
 package uptc.edu.co.model;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Locale;
 
 import uptc.edu.co.config.AppConfig;
 import uptc.edu.co.interfaces.IProductModel;
 import uptc.edu.co.pojo.Product;
+import uptc.edu.co.structures.DoubleList;
 
 public class ProductModel implements IProductModel {
-    private final List<Product> products;
+    private final DoubleList<Product> products;
     private final BigDecimal maxPrice;
     private final String descriptionFormat;
     private int nextId;
 
     public ProductModel(AppConfig appConfig) {
-        this.products = new ArrayList<Product>();
+        this.products = new DoubleList<Product>();
         this.nextId = 1;
         this.maxPrice = new BigDecimal(appConfig.getString("product.price.max", "99999999.99"));
         this.descriptionFormat = appConfig.getString("product.description.format", "UPPER");
@@ -34,7 +32,7 @@ public class ProductModel implements IProductModel {
 
         Product product = new Product(nextId, normalizedDescription, normalizedUnit, quantity, price);
         nextId++;
-        products.add(product);
+        products.addEnd(product);
         return product;
     }
 
@@ -42,8 +40,7 @@ public class ProductModel implements IProductModel {
         for (int index = 0; index < products.size(); index++) {
             Product current = products.get(index);
             if (current.getId() == id) {
-                products.remove(index);
-                return current;
+                return products.removeAt(index);
             }
         }
         return null;
@@ -54,11 +51,11 @@ public class ProductModel implements IProductModel {
         if (index < 0) {
             return null;
         }
-        return products.remove(index);
+        return products.removeAt(index);
     }
 
-    public List<Product> getProducts() {
-        return Collections.unmodifiableList(products);
+    public DoubleList<Product> getProducts() {
+        return products.copy();
     }
 
     public BigDecimal getMaxPrice() {

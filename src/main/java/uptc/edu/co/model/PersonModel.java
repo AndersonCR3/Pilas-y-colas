@@ -1,17 +1,14 @@
 package uptc.edu.co.model;
 
-import java.util.ArrayList;
-import java.util.ArrayDeque;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
-
 import uptc.edu.co.config.AppConfig;
 import uptc.edu.co.interfaces.IPersonModel;
 import uptc.edu.co.pojo.Person;
+import uptc.edu.co.structures.CollectionMode;
+import uptc.edu.co.structures.DoubleList;
+import uptc.edu.co.structures.ManagerCollection;
 
 public class PersonModel implements IPersonModel {
-    private final Queue<Person> peopleQueue;
+    private final ManagerCollection<Person> people;
     private int nextId;
     private int minNamesLength;
     private int maxNamesLength;
@@ -20,7 +17,9 @@ public class PersonModel implements IPersonModel {
     private int pageSize;
 
     public PersonModel(AppConfig appConfig) {
-        this.peopleQueue = new ArrayDeque<Person>();
+        CollectionMode mode = CollectionMode.from(appConfig.getString("person.collection.mode", "QUEUE"),
+            CollectionMode.QUEUE);
+        this.people = new ManagerCollection<Person>(mode);
         this.nextId = 1;
         this.minNamesLength = appConfig.getInt("person.names.min.length", 2);
         this.maxNamesLength = appConfig.getInt("person.names.max.length", 40);
@@ -34,7 +33,7 @@ public class PersonModel implements IPersonModel {
     }
 
     public void addPerson(Person person) {
-        peopleQueue.offer(person);
+        people.add(person);
     }
 
     public Person createPerson(String names, String lastNames, String gender, String birthDate) {
@@ -45,59 +44,39 @@ public class PersonModel implements IPersonModel {
     }
 
     public Person removeNextPerson() {
-        return peopleQueue.poll();
+        return people.remove();
     }
 
     public Person removePersonById(int id) {
-        Person target = null;
-        for (Person person : peopleQueue) {
-            if (person.getId() == id) {
-                target = person;
-                break;
+        for (int index = 0; index < people.size(); index++) {
+            Person person = people.get(index);
+            if (person != null && person.getId() == id) {
+                return people.removeAt(index);
             }
         }
-
-        if (target != null) {
-            peopleQueue.remove(target);
-        }
-        return target;
+        return null;
     }
 
     public Person removePersonByName(String names) {
-        Person target = findPersonByName(names);
-        if (target != null) {
-            peopleQueue.remove(target);
-        }
-        return target;
-    }
-
-    private Person findPersonByName(String names) {
         if (names == null) {
             return null;
         }
         String targetName = names.trim();
-        for (Person person : peopleQueue) {
-            if (person.getNames().equalsIgnoreCase(targetName)) {
-                return person;
+        for (int index = 0; index < people.size(); index++) {
+            Person person = people.get(index);
+            if (person != null && person.getNames().equalsIgnoreCase(targetName)) {
+                return people.removeAt(index);
             }
         }
         return null;
     }
 
     public Person removeLastPerson() {
-        Person last = null;
-        for (Person person : peopleQueue) {
-            last = person;
-        }
-
-        if (last != null) {
-            peopleQueue.remove(last);
-        }
-        return last;
+        return people.removeLast();
     }
 
-    public List<Person> getPeople() {
-        return Collections.unmodifiableList(new ArrayList<Person>(peopleQueue));
+    public DoubleList<Person> getPeople() {
+        return people.getOrdered();
     }
 
     public int getMinNamesLength() {

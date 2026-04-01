@@ -7,11 +7,10 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.List;
-
 import uptc.edu.co.i18n.MessageService;
 import uptc.edu.co.interfaces.IAccountingModel;
 import uptc.edu.co.pojo.AccountingMovement;
+import uptc.edu.co.structures.DoubleList;
 
 public class AccountingPresenter {
     private final IAccountingModel accountingModel;
@@ -34,11 +33,11 @@ public class AccountingPresenter {
         }
     }
 
-    public List<AccountingMovement> getMovementsLifo() {
+    public DoubleList<AccountingMovement> getMovementsLifo() {
         return accountingModel.getMovementsLifo();
     }
 
-    public BigDecimal calculateTotal(List<AccountingMovement> movements) {
+    public BigDecimal calculateTotal(DoubleList<AccountingMovement> movements) {
         BigDecimal total = BigDecimal.ZERO;
         for (int i = 0; i < movements.size(); i++) {
             AccountingMovement movement = movements.get(i);
@@ -49,7 +48,7 @@ public class AccountingPresenter {
     }
 
     public ActionResult exportMovements(File file) {
-        List<AccountingMovement> movements = accountingModel.getMovementsLifo();
+        DoubleList<AccountingMovement> movements = accountingModel.getMovementsLifo();
         if (movements.isEmpty()) {
             return ActionResult.failure(messages.get("accounting.export.empty"));
         }

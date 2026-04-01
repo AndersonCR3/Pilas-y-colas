@@ -6,11 +6,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.List;
-
 import uptc.edu.co.i18n.MessageService;
 import uptc.edu.co.interfaces.IPersonModel;
 import uptc.edu.co.pojo.Person;
+import uptc.edu.co.structures.DoubleList;
 
 public class PersonPresenter {
     private final IPersonModel personModel;
@@ -58,7 +57,7 @@ public class PersonPresenter {
         return ActionResult.success(message);
     }
 
-    public List<Person> getPeople() {
+    public DoubleList<Person> getPeople() {
         return personModel.getPeople();
     }
 
@@ -67,7 +66,7 @@ public class PersonPresenter {
     }
 
     public ActionResult exportPeople(File file) {
-        List<Person> people = personModel.getPeople();
+        DoubleList<Person> people = personModel.getPeople();
         if (people.isEmpty()) {
             return ActionResult.failure(messages.get("person.export.empty"));
         }

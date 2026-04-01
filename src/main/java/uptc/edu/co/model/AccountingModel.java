@@ -1,20 +1,22 @@
 package uptc.edu.co.model;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Stack;
 
+import uptc.edu.co.config.AppConfig;
 import uptc.edu.co.interfaces.IAccountingModel;
 import uptc.edu.co.pojo.AccountingMovement;
+import uptc.edu.co.structures.CollectionMode;
+import uptc.edu.co.structures.DoubleList;
+import uptc.edu.co.structures.ManagerCollection;
 
 public class AccountingModel implements IAccountingModel {
-    private final Stack<AccountingMovement> movements;
+    private final ManagerCollection<AccountingMovement> movements;
     private int nextId;
 
-    public AccountingModel() {
-        this.movements = new Stack<AccountingMovement>();
+    public AccountingModel(AppConfig appConfig) {
+        CollectionMode mode = CollectionMode.from(appConfig.getString("accounting.collection.mode", "STACK"),
+                CollectionMode.STACK);
+        this.movements = new ManagerCollection<AccountingMovement>(mode);
         this.nextId = 1;
     }
 
@@ -26,14 +28,12 @@ public class AccountingModel implements IAccountingModel {
         AccountingMovement movement = new AccountingMovement(nextId, description.trim(), movementType.trim(), value,
                 dateTime.trim());
         nextId++;
-        movements.push(movement);
+        movements.add(movement);
         return movement;
     }
 
-    public List<AccountingMovement> getMovementsLifo() {
-        List<AccountingMovement> snapshot = new ArrayList<AccountingMovement>(movements);
-        Collections.reverse(snapshot);
-        return Collections.unmodifiableList(snapshot);
+    public DoubleList<AccountingMovement> getMovementsLifo() {
+        return movements.getOrdered();
     }
 
     private void validateDescription(String description) {

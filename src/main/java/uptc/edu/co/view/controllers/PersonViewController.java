@@ -5,8 +5,6 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.List;
-
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -20,6 +18,7 @@ import uptc.edu.co.i18n.MessageService;
 import uptc.edu.co.mediator.GuiMenuMediator;
 import uptc.edu.co.pojo.Person;
 import uptc.edu.co.presenter.ActionResult;
+import uptc.edu.co.structures.DoubleList;
 
 public class PersonViewController extends AbstractViewController {
     private static final DateTimeFormatter BIRTH_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -63,7 +62,7 @@ public class PersonViewController extends AbstractViewController {
     }
 
     public void exportPeopleToCsv() {
-        List<Person> people = menuMediator.getPeople();
+        DoubleList<Person> people = menuMediator.getPeople();
         if (people.isEmpty()) {
             showMessage(messages.get("person.export.empty"));
             return;
@@ -128,13 +127,13 @@ public class PersonViewController extends AbstractViewController {
 
     private void refreshPersonList(PersonListContext context) {
         context.model.setRowCount(0);
-        List<Person> people = menuMediator.getPeople();
+        DoubleList<Person> people = menuMediator.getPeople();
         int totalPages = adjustPersonPageIndex(context, people);
         addPersonRows(context.model, people, context.pageIndex[0], menuMediator.getPersonPageSize());
         context.pageLabel.setText((context.pageIndex[0] + 1) + "/" + totalPages);
     }
 
-    private int adjustPersonPageIndex(PersonListContext context, List<Person> people) {
+    private int adjustPersonPageIndex(PersonListContext context, DoubleList<Person> people) {
         int totalPages = calculatePages(people.size(), menuMediator.getPersonPageSize());
         if (context.pageIndex[0] >= totalPages) {
             context.pageIndex[0] = Math.max(0, totalPages - 1);
@@ -142,7 +141,7 @@ public class PersonViewController extends AbstractViewController {
         return totalPages;
     }
 
-    private void addPersonRows(DefaultTableModel model, List<Person> people, int pageIndex, int pageSize) {
+    private void addPersonRows(DefaultTableModel model, DoubleList<Person> people, int pageIndex, int pageSize) {
         int start = pageIndex * pageSize;
         int end = Math.min(start + pageSize, people.size());
         for (int index = start; index < end; index++) {

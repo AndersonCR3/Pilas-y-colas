@@ -26,7 +26,7 @@ public class ApplicationBootstrap {
 
         IPersonModel personModel = new PersonModel(appConfig);
         IProductModel productModel = new ProductModel(appConfig);
-        IAccountingModel accountingModel = new AccountingModel();
+        IAccountingModel accountingModel = new AccountingModel(appConfig);
 
         PersonPresenter personPresenter = new PersonPresenter(personModel, messages);
         ProductPresenter productPresenter = new ProductPresenter(productModel, messages);

@@ -2,8 +2,6 @@ package uptc.edu.co.mediator;
 
 import java.io.File;
 import java.math.BigDecimal;
-import java.util.List;
-
 import uptc.edu.co.pojo.AccountingMovement;
 import uptc.edu.co.pojo.Person;
 import uptc.edu.co.pojo.Product;
@@ -11,6 +9,7 @@ import uptc.edu.co.presenter.AccountingPresenter;
 import uptc.edu.co.presenter.ActionResult;
 import uptc.edu.co.presenter.PersonPresenter;
 import uptc.edu.co.presenter.ProductPresenter;
+import uptc.edu.co.structures.DoubleList;
 
 public class GuiMenuMediator {
     private final PersonPresenter personPresenter;
@@ -36,7 +35,7 @@ public class GuiMenuMediator {
         return personPresenter.removeLastPerson();
     }
 
-    public List<Person> getPeople() {
+    public DoubleList<Person> getPeople() {
         return personPresenter.getPeople();
     }
 
@@ -56,7 +55,7 @@ public class GuiMenuMediator {
         return productPresenter.removeProductByParameter(param);
     }
 
-    public List<Product> getProducts() {
+    public DoubleList<Product> getProducts() {
         return productPresenter.getProducts();
     }
 
@@ -68,11 +67,11 @@ public class GuiMenuMediator {
         return accountingPresenter.registerMovement(description, type, value, dateTime);
     }
 
-    public List<AccountingMovement> getMovementsLifo() {
+    public DoubleList<AccountingMovement> getMovementsLifo() {
         return accountingPresenter.getMovementsLifo();
     }
 
-    public BigDecimal calculateAccountingTotal(List<AccountingMovement> movements) {
+    public BigDecimal calculateAccountingTotal(DoubleList<AccountingMovement> movements) {
         return accountingPresenter.calculateTotal(movements);
     }
 
