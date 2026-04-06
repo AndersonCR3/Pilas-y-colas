@@ -7,7 +7,13 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import uptc.edu.co.i18n.MessageService;
+import uptc.edu.co.interfaces.IAccountingModel;
+import uptc.edu.co.interfaces.IPersonModel;
+import uptc.edu.co.interfaces.IProductModel;
 import uptc.edu.co.mediator.GuiMenuMediator;
+import uptc.edu.co.presenter.AccountingPresenter;
+import uptc.edu.co.presenter.PersonPresenter;
+import uptc.edu.co.presenter.ProductPresenter;
 import uptc.edu.co.view.components.MenuButtonFactory;
 import uptc.edu.co.view.controllers.AccountingViewController;
 import uptc.edu.co.view.controllers.PersonViewController;
@@ -26,14 +32,22 @@ public class MainFrame extends JFrame {
     private final ProductViewController productController;
     private final AccountingViewController accountingController;
 
-    public MainFrame(MessageService messages, GuiMenuMediator menuMediator) {
+    public MainFrame(MessageService messages, IPersonModel personModel, IProductModel productModel,
+            IAccountingModel accountingModel) {
         this.messages = messages;
         this.buttonFactory = new MenuButtonFactory();
         this.cardLayout = new CardLayout();
         this.cardPanel = new JPanel(cardLayout);
-        this.personController = new PersonViewController(this, messages, menuMediator);
-        this.productController = new ProductViewController(this, messages, menuMediator);
-        this.accountingController = new AccountingViewController(this, messages, menuMediator);
+
+        GuiMenuMediator menuMediator = new GuiMenuMediator(personModel, productModel, accountingModel, messages);
+        PersonPresenter personPresenter = new PersonPresenter(menuMediator);
+        ProductPresenter productPresenter = new ProductPresenter(menuMediator);
+        AccountingPresenter accountingPresenter = new AccountingPresenter(menuMediator);
+
+        this.personController = new PersonViewController(this, messages, personPresenter);
+        this.productController = new ProductViewController(this, messages, productPresenter);
+        this.accountingController = new AccountingViewController(this, messages, accountingPresenter);
+
         initializeFrame();
         initializeCards();
     }
@@ -48,18 +62,34 @@ public class MainFrame extends JFrame {
     }
 
     private void initializeCards() {
+        addMainCard();
+        addPersonCard();
+        addProductCard();
+        addAccountingCard();
+        }
+
+        private void addMainCard() {
         cardPanel.add(new MainMenuPanel(messages, buttonFactory, this::openPersonCard, this::openProductCard,
-                this::openAccountingCard, this::dispose), "MAIN");
+            this::openAccountingCard, this::dispose), "MAIN");
+        }
+
+        private void addPersonCard() {
         cardPanel.add(new PersonMenuPanel(messages, buttonFactory, personController::addPerson,
-                personController::removePersonByParameter, personController::removeLastPerson,
-                personController::openPersonListWindow, personController::exportPeopleToCsv, this::openMainCard),
-                "PERSON");
+            personController::removePersonByParameter, personController::removeLastPerson,
+            personController::openPersonListWindow, personController::exportPeopleToCsv, this::openMainCard),
+            "PERSON");
+        }
+
+        private void addProductCard() {
         cardPanel.add(new ProductMenuPanel(messages, buttonFactory, productController::addProduct,
-                productController::removeProductByParameter, productController::openProductListWindow,
-                productController::exportProductsToCsv, this::openMainCard), "PRODUCT");
+            productController::removeProductByParameter, productController::openProductListWindow,
+            productController::exportProductsToCsv, this::openMainCard), "PRODUCT");
+        }
+
+        private void addAccountingCard() {
         cardPanel.add(new AccountingMenuPanel(messages, buttonFactory, accountingController::addAccountingMovement,
-                accountingController::openAccountingListWindow, accountingController::exportAccountingToCsv,
-                this::openMainCard), "ACCOUNTING");
+            accountingController::openAccountingListWindow, accountingController::exportAccountingToCsv,
+            this::openMainCard), "ACCOUNTING");
     }
 
     private void openMainCard() {

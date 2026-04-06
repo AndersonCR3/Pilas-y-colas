@@ -9,17 +9,17 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 import uptc.edu.co.i18n.MessageService;
-import uptc.edu.co.mediator.GuiMenuMediator;
 import uptc.edu.co.pojo.Product;
 import uptc.edu.co.presenter.ActionResult;
+import uptc.edu.co.presenter.ProductPresenter;
 import uptc.edu.co.structures.DoubleList;
 
 public class ProductViewController extends AbstractViewController {
-    private final GuiMenuMediator menuMediator;
+    private final ProductPresenter presenter;
 
-    public ProductViewController(JFrame parent, MessageService messages, GuiMenuMediator menuMediator) {
+    public ProductViewController(JFrame parent, MessageService messages, ProductPresenter presenter) {
         super(parent, messages);
-        this.menuMediator = menuMediator;
+        this.presenter = presenter;
     }
 
     public void addProduct() {
@@ -27,7 +27,7 @@ public class ProductViewController extends AbstractViewController {
         if (data == null || data.price == null || data.quantity == null) {
             return;
         }
-        ActionResult result = menuMediator.registerProduct(data.description, data.unit, data.quantity, data.price);
+        ActionResult result = presenter.registerProduct(data.description, data.unit, data.quantity, data.price);
         showMessage(result.getMessage());
     }
 
@@ -36,7 +36,7 @@ public class ProductViewController extends AbstractViewController {
         if (isBlank(param)) {
             return;
         }
-        ActionResult result = menuMediator.removeProductByParameter(param.trim());
+        ActionResult result = presenter.removeProductByParameter(param.trim());
         showMessage(result.getMessage());
     }
 
@@ -45,38 +45,51 @@ public class ProductViewController extends AbstractViewController {
         DefaultTableModel model = nonEditableModel(new Object[] { messages.get("product.list.col.id"),
                 messages.get("product.list.col.description"), messages.get("product.list.col.unit"),
                 messages.get("product.list.col.quantity"), messages.get("product.list.col.price") });
-        addProductRows(model, menuMediator.getProducts());
+        addProductRows(model, presenter.getProducts());
         JTable table = createAlignedTable(model);
         showListWindow(frame, table, null);
     }
 
     public void exportProductsToCsv() {
-        DoubleList<Product> products = menuMediator.getProducts();
+        DoubleList<Product> products = presenter.getProducts();
         if (products.isEmpty()) {
             showMessage(messages.get("product.export.empty"));
             return;
         }
         File file = chooseExportFile("productos.csv");
         if (file != null) {
-            showMessage(menuMediator.exportProducts(file).getMessage());
+            showMessage(presenter.exportProducts(file).getMessage());
         }
     }
 
     private ProductFormData readProductFormData() {
         JTextField descriptionField = new JTextField();
-        JComboBox<String> unitCombo = new JComboBox<String>(new String[] { messages.get("option.unit.libra"),
-            messages.get("option.unit.kilos"), messages.get("option.unit.bultos"),
-            messages.get("option.unit.toneladas") });
+        JComboBox<String> unitCombo = createUnitCombo();
         JTextField quantityField = new JTextField();
         JTextField priceField = new JTextField();
         javax.swing.JPanel form = createFormPanel();
+        buildProductForm(form, descriptionField, unitCombo, quantityField, priceField);
+        if (!confirmForm(form, "menu.product.add")) {
+            return null;
+        }
+        return buildProductData(descriptionField, unitCombo, quantityField, priceField);
+    }
+
+    private JComboBox<String> createUnitCombo() {
+        return new JComboBox<String>(new String[] { messages.get("option.unit.libra"), messages.get("option.unit.kilos"),
+                messages.get("option.unit.bultos"), messages.get("option.unit.toneladas") });
+    }
+
+    private void buildProductForm(javax.swing.JPanel form, JTextField descriptionField, JComboBox<String> unitCombo,
+            JTextField quantityField, JTextField priceField) {
         addFormRow(form, "product.prompt.description", descriptionField);
         addFormRow(form, "product.prompt.unit", unitCombo);
         addFormRow(form, "product.prompt.quantity", quantityField);
         addFormRow(form, "product.prompt.price", priceField);
-        if (!confirmForm(form, "menu.product.add")) {
-            return null;
-        }
+    }
+
+    private ProductFormData buildProductData(JTextField descriptionField, JComboBox<String> unitCombo,
+            JTextField quantityField, JTextField priceField) {
         BigDecimal quantity = parseDecimal(quantityField.getText(), "product.error.quantity");
         BigDecimal price = parseDecimal(priceField.getText(), "product.error.price");
         String canonicalUnit = toCanonicalUnit(String.valueOf(unitCombo.getSelectedItem()));
@@ -102,35 +115,46 @@ public class ProductViewController extends AbstractViewController {
     }
 
     private String toCanonicalUnit(String selectedLabel) {
-        if (messages.get("option.unit.libra").equals(selectedLabel)) {
-            return "libra";
-        }
-        if (messages.get("option.unit.kilos").equals(selectedLabel)) {
-            return "kilos";
-        }
-        if (messages.get("option.unit.bultos").equals(selectedLabel)) {
-            return "bultos";
-        }
-        if (messages.get("option.unit.toneladas").equals(selectedLabel)) {
-            return "toneladas";
+        String canonical = mapLocalizedUnit(selectedLabel);
+        if (canonical != null) {
+            return canonical;
         }
         return safeTrim(selectedLabel).toLowerCase();
     }
 
+    private String mapLocalizedUnit(String selectedLabel) {
+        String[] labels = new String[] { messages.get("option.unit.libra"), messages.get("option.unit.kilos"),
+                messages.get("option.unit.bultos"), messages.get("option.unit.toneladas") };
+        String[] canonicalUnits = new String[] { "libra", "kilos", "bultos", "toneladas" };
+        return firstMappedValue(selectedLabel, labels, canonicalUnits, false);
+    }
+
     private String localizeUnit(String canonicalUnit) {
-        if ("libra".equalsIgnoreCase(canonicalUnit)) {
-            return messages.get("option.unit.libra");
+        String localized = mapCanonicalUnit(canonicalUnit);
+        return localized == null ? canonicalUnit : localized;
+    }
+
+    private String mapCanonicalUnit(String canonicalUnit) {
+        String[] canonicalUnits = new String[] { "libra", "kilos", "bultos", "toneladas" };
+        String[] labels = new String[] { messages.get("option.unit.libra"), messages.get("option.unit.kilos"),
+                messages.get("option.unit.bultos"), messages.get("option.unit.toneladas") };
+        return firstMappedValue(canonicalUnit, canonicalUnits, labels, true);
+    }
+
+    private String firstMappedValue(String value, String[] keys, String[] values, boolean ignoreCase) {
+        for (int index = 0; index < keys.length; index++) {
+            if (matches(value, keys[index], ignoreCase)) {
+                return values[index];
+            }
         }
-        if ("kilos".equalsIgnoreCase(canonicalUnit)) {
-            return messages.get("option.unit.kilos");
+        return null;
+    }
+
+    private boolean matches(String value, String key, boolean ignoreCase) {
+        if (ignoreCase) {
+            return key.equalsIgnoreCase(value);
         }
-        if ("bultos".equalsIgnoreCase(canonicalUnit)) {
-            return messages.get("option.unit.bultos");
-        }
-        if ("toneladas".equalsIgnoreCase(canonicalUnit)) {
-            return messages.get("option.unit.toneladas");
-        }
-        return canonicalUnit;
+        return key.equals(value);
     }
 
     private static final class ProductFormData {

@@ -39,13 +39,7 @@ public class DoubleList<T> implements Iterable<T> {
             return null;
         }
         T value = head.value;
-        if (head == tail) {
-            head = null;
-            tail = null;
-        } else {
-            head = head.next;
-            head.previous = null;
-        }
+        unlinkFirstNode();
         size--;
         return value;
     }
@@ -55,13 +49,7 @@ public class DoubleList<T> implements Iterable<T> {
             return null;
         }
         T value = tail.value;
-        if (head == tail) {
-            head = null;
-            tail = null;
-        } else {
-            tail = tail.previous;
-            tail.next = null;
-        }
+        unlinkLastNode();
         size--;
         return value;
     }
@@ -70,15 +58,10 @@ public class DoubleList<T> implements Iterable<T> {
         if (index < 0 || index >= size) {
             return null;
         }
-        if (index == 0) {
-            return removeFirst();
-        }
-        if (index == size - 1) {
-            return removeEnd();
-        }
+        if (index == 0) return removeFirst();
+        if (index == size - 1) return removeEnd();
         Node<T> current = nodeAt(index);
-        current.previous.next = current.next;
-        current.next.previous = current.previous;
+        unlinkMiddleNode(current);
         size--;
         return current.value;
     }
@@ -115,43 +98,66 @@ public class DoubleList<T> implements Iterable<T> {
     }
 
     public Iterator<T> iterator() {
-        return new Iterator<T>() {
-            private Node<T> current = head;
+        return createIterator();
+    }
 
-            public boolean hasNext() {
-                return current != null;
-            }
-
-            public T next() {
-                if (current == null) {
-                    throw new NoSuchElementException();
-                }
-                T value = current.value;
-                current = current.next;
-                return value;
-            }
-        };
+    private Iterator<T> createIterator() {
+        return new DoubleListIterator();
     }
 
     private Node<T> nodeAt(int index) {
-        Node<T> current;
-        int step;
         if (index < size / 2) {
-            current = head;
-            step = 0;
-            while (step < index) {
-                current = current.next;
-                step++;
-            }
-            return current;
+            return findFromHead(index);
         }
-        current = tail;
-        step = size - 1;
+        return findFromTail(index);
+    }
+
+    private Node<T> findFromHead(int index) {
+        Node<T> current = head;
+        int step = 0;
+        while (step < index) {
+            current = current.next;
+            step++;
+        }
+        return current;
+    }
+
+    private Node<T> findFromTail(int index) {
+        Node<T> current = tail;
+        int step = size - 1;
         while (step > index) {
             current = current.previous;
             step--;
         }
         return current;
+    }
+
+    private void unlinkFirstNode() {
+        if (head == tail) {
+            clearList();
+            return;
+        }
+        head = head.next;
+        head.previous = null;
+    }
+
+    private void unlinkLastNode() {
+        if (head == tail) {
+            clearList();
+            return;
+        }
+        tail = tail.previous;
+        tail.next = null;
+    }
+
+    private void unlinkMiddleNode(Node<T> current) {
+        current.previous.next = current.next;
+        current.next.previous = current.previous;
+    }
+
+    private void clearList() {
+        head = null;
+        tail = null;
     }
 
     private static final class Node<T> {
@@ -161,6 +167,23 @@ public class DoubleList<T> implements Iterable<T> {
 
         private Node(T value) {
             this.value = value;
+        }
+    }
+
+    private final class DoubleListIterator implements Iterator<T> {
+        private Node<T> current = head;
+
+        public boolean hasNext() {
+            return current != null;
+        }
+
+        public T next() {
+            if (current == null) {
+                throw new NoSuchElementException();
+            }
+            T value = current.value;
+            current = current.next;
+            return value;
         }
     }
 }

@@ -15,19 +15,19 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 import uptc.edu.co.i18n.MessageService;
-import uptc.edu.co.mediator.GuiMenuMediator;
 import uptc.edu.co.pojo.Person;
 import uptc.edu.co.presenter.ActionResult;
+import uptc.edu.co.presenter.PersonPresenter;
 import uptc.edu.co.structures.DoubleList;
 
 public class PersonViewController extends AbstractViewController {
     private static final DateTimeFormatter BIRTH_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    private final GuiMenuMediator menuMediator;
+    private final PersonPresenter presenter;
 
-    public PersonViewController(JFrame parent, MessageService messages, GuiMenuMediator menuMediator) {
+    public PersonViewController(JFrame parent, MessageService messages, PersonPresenter presenter) {
         super(parent, messages);
-        this.menuMediator = menuMediator;
+        this.presenter = presenter;
     }
 
     public void addPerson() {
@@ -35,7 +35,7 @@ public class PersonViewController extends AbstractViewController {
         if (data == null) {
             return;
         }
-        ActionResult result = menuMediator.registerPerson(data.names, data.lastNames, data.gender, data.birthDate);
+        ActionResult result = presenter.registerPerson(data.names, data.lastNames, data.gender, data.birthDate);
         showMessage(result.getMessage());
     }
 
@@ -44,12 +44,12 @@ public class PersonViewController extends AbstractViewController {
         if (isBlank(param)) {
             return;
         }
-        ActionResult result = menuMediator.removePersonByParameter(param.trim());
+        ActionResult result = presenter.removePersonByParameter(param.trim());
         showMessage(result.getMessage());
     }
 
     public void removeLastPerson() {
-        ActionResult result = menuMediator.removeLastPerson();
+        ActionResult result = presenter.removeLastPerson();
         showMessage(result.getMessage());
     }
 
@@ -62,43 +62,55 @@ public class PersonViewController extends AbstractViewController {
     }
 
     public void exportPeopleToCsv() {
-        DoubleList<Person> people = menuMediator.getPeople();
+        DoubleList<Person> people = presenter.getPeople();
         if (people.isEmpty()) {
             showMessage(messages.get("person.export.empty"));
             return;
         }
         File file = chooseExportFile("personas.csv");
         if (file != null) {
-            showMessage(menuMediator.exportPeople(file).getMessage());
+            showMessage(presenter.exportPeople(file).getMessage());
         }
     }
 
     private PersonFormData readPersonFormData() {
         JTextField namesField = new JTextField();
         JTextField lastNamesField = new JTextField();
-        JComboBox<String> genderCombo = new JComboBox<String>(
-            new String[] { messages.get("option.gender.male"), messages.get("option.gender.female") });
+        JComboBox<String> genderCombo = createGenderCombo();
         JTextField birthDateField = new JTextField();
         JPanel form = createFormPanel();
+        buildPersonForm(form, namesField, lastNamesField, genderCombo, birthDateField);
+        if (!confirmForm(form, "menu.person.add")) {
+            return null;
+        }
+        return buildPersonData(namesField, lastNamesField, genderCombo, birthDateField);
+    }
+
+    private JComboBox<String> createGenderCombo() {
+        return new JComboBox<String>(
+                new String[] { messages.get("option.gender.male"), messages.get("option.gender.female") });
+    }
+
+    private void buildPersonForm(JPanel form, JTextField namesField, JTextField lastNamesField,
+            JComboBox<String> genderCombo, JTextField birthDateField) {
         addFormRow(form, "person.prompt.names", namesField);
         addFormRow(form, "person.prompt.lastNames", lastNamesField);
         addFormRow(form, "person.prompt.gender", genderCombo);
         addFormRow(form, "person.prompt.birthDate", birthDateField);
-        if (!confirmForm(form, "menu.person.add")) {
-            return null;
-        }
+    }
+
+    private PersonFormData buildPersonData(JTextField namesField, JTextField lastNamesField,
+            JComboBox<String> genderCombo, JTextField birthDateField) {
         String canonicalGender = toCanonicalGender(String.valueOf(genderCombo.getSelectedItem()));
-        return new PersonFormData(safeTrim(namesField.getText()), safeTrim(lastNamesField.getText()),
-            canonicalGender, safeTrim(birthDateField.getText()));
+        return new PersonFormData(safeTrim(namesField.getText()), safeTrim(lastNamesField.getText()), canonicalGender,
+                safeTrim(birthDateField.getText()));
     }
 
     private PersonListContext createPersonListContext() {
         JFrame frame = createListFrame("menu.person.list");
-        DefaultTableModel model = nonEditableModel(new Object[] { messages.get("person.list.col.names"),
-                messages.get("person.list.col.lastNames"), messages.get("person.list.col.gender"),
-                messages.get("person.list.col.age") });
+        DefaultTableModel model = createPersonTableModel();
         JTable table = createAlignedTable(model);
-        JPanel bottomPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
+        JPanel bottomPanel = createPagerPanel();
         JLabel pageLabel = new JLabel("1/1");
         int[] pageIndex = new int[] { 0 };
         JButton prevButton = new JButton("<");
@@ -107,6 +119,16 @@ public class PersonViewController extends AbstractViewController {
         bottomPanel.add(pageLabel);
         bottomPanel.add(nextButton);
         return new PersonListContext(frame, table, model, bottomPanel, pageLabel, pageIndex, prevButton, nextButton);
+    }
+
+    private DefaultTableModel createPersonTableModel() {
+        return nonEditableModel(new Object[] { messages.get("person.list.col.names"),
+                messages.get("person.list.col.lastNames"), messages.get("person.list.col.gender"),
+                messages.get("person.list.col.age") });
+    }
+
+    private JPanel createPagerPanel() {
+        return new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT));
     }
 
     private void goPreviousPersonPage(PersonListContext context) {
@@ -127,14 +149,14 @@ public class PersonViewController extends AbstractViewController {
 
     private void refreshPersonList(PersonListContext context) {
         context.model.setRowCount(0);
-        DoubleList<Person> people = menuMediator.getPeople();
+        DoubleList<Person> people = presenter.getPeople();
         int totalPages = adjustPersonPageIndex(context, people);
-        addPersonRows(context.model, people, context.pageIndex[0], menuMediator.getPersonPageSize());
+        addPersonRows(context.model, people, context.pageIndex[0], presenter.getPersonPageSize());
         context.pageLabel.setText((context.pageIndex[0] + 1) + "/" + totalPages);
     }
 
     private int adjustPersonPageIndex(PersonListContext context, DoubleList<Person> people) {
-        int totalPages = calculatePages(people.size(), menuMediator.getPersonPageSize());
+        int totalPages = calculatePages(people.size(), presenter.getPersonPageSize());
         if (context.pageIndex[0] >= totalPages) {
             context.pageIndex[0] = Math.max(0, totalPages - 1);
         }
@@ -172,7 +194,7 @@ public class PersonViewController extends AbstractViewController {
     }
 
     private int totalPersonPages() {
-        return calculatePages(menuMediator.getPeople().size(), menuMediator.getPersonPageSize());
+        return calculatePages(presenter.getPeople().size(), presenter.getPersonPageSize());
     }
 
     private int calculateAge(String birthDate) {

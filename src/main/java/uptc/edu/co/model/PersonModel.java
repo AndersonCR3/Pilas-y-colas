@@ -18,18 +18,23 @@ public class PersonModel implements IPersonModel {
 
     public PersonModel(AppConfig appConfig) {
         CollectionMode mode = CollectionMode.from(appConfig.getString("person.collection.mode", "QUEUE"),
-            CollectionMode.QUEUE);
+                CollectionMode.QUEUE);
         this.people = new ManagerCollection<Person>(mode);
         this.nextId = 1;
+        loadValidationSettings(appConfig);
+        this.pageSize = readPageSize(appConfig);
+    }
+
+    private void loadValidationSettings(AppConfig appConfig) {
         this.minNamesLength = appConfig.getInt("person.names.min.length", 2);
         this.maxNamesLength = appConfig.getInt("person.names.max.length", 40);
         this.minLastNamesLength = appConfig.getInt("person.lastnames.min.length", 2);
         this.maxLastNamesLength = appConfig.getInt("person.lastnames.max.length", 40);
-        this.pageSize = appConfig.getInt("person.list.page.size", 10);
+    }
 
-        if (pageSize <= 0) {
-            pageSize = 10;
-        }
+    private int readPageSize(AppConfig appConfig) {
+        int configuredPageSize = appConfig.getInt("person.list.page.size", 10);
+        return configuredPageSize > 0 ? configuredPageSize : 10;
     }
 
     public void addPerson(Person person) {

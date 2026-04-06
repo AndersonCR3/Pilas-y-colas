@@ -8,13 +8,9 @@ import uptc.edu.co.interfaces.IAccountingModel;
 import uptc.edu.co.interfaces.IPersonModel;
 import uptc.edu.co.interfaces.IProductModel;
 import uptc.edu.co.i18n.MessageService;
-import uptc.edu.co.mediator.GuiMenuMediator;
 import uptc.edu.co.model.AccountingModel;
 import uptc.edu.co.model.PersonModel;
 import uptc.edu.co.model.ProductModel;
-import uptc.edu.co.presenter.AccountingPresenter;
-import uptc.edu.co.presenter.PersonPresenter;
-import uptc.edu.co.presenter.ProductPresenter;
 import uptc.edu.co.view.MainFrame;
 
 public class ApplicationBootstrap {
@@ -28,15 +24,10 @@ public class ApplicationBootstrap {
         IProductModel productModel = new ProductModel(appConfig);
         IAccountingModel accountingModel = new AccountingModel(appConfig);
 
-        PersonPresenter personPresenter = new PersonPresenter(personModel, messages);
-        ProductPresenter productPresenter = new ProductPresenter(productModel, messages);
-        AccountingPresenter accountingPresenter = new AccountingPresenter(accountingModel, messages);
-        GuiMenuMediator guiMenuMediator = new GuiMenuMediator(personPresenter, productPresenter, accountingPresenter);
-
         LOGGER.info("Aplicacion iniciada en modo GUI Swing. Directorio de configuracion externa: {}",
                 appConfig.getExternalConfigDir().getAbsolutePath());
 
-        MainFrame frame = new MainFrame(messages, guiMenuMediator);
+        MainFrame frame = new MainFrame(messages, personModel, productModel, accountingModel);
         frame.setVisible(true);
     }
 }
